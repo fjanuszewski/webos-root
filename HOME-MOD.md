@@ -77,7 +77,7 @@ Se cargan con `Loader` desde archivos de LG modificados: si un componente falla,
 | `CleanRecents.qml` | Primera fila: últimas 5 apps usadas (`systemProperties.recentAppsData`, que el Home ya recibe de `com.webos.service.recent`), completa con las primeras del launcher. | `MainView.qml` (appListArea) |
 | `CleanDrawer.qml` | Cajón a pantalla completa con todas las apps en filas de 5 (`interfaces.launchPoints.launchPointsModel`). ▼ desde la fila lo abre; ▲ en la 1ª fila o ATRÁS (`WebOS.Key_webOS_Back`) lo cierra; OK abre con `interfaces.launchPoints.doLaunch(entry)`. | `MainView.qml` (raíz, z 1000) |
 | `CleanGlow.qml` | Fondo que se tiñe con el color de la app enfocada: muestrea el ícono en un Canvas (píxel más saturado), si no usa `iconColor`/`bgColor`. | `MainView.qml` (dentro de `shelfListContainer`, antes de `topArea`) |
-| `Panel/Eyebrow/Chip.qml` | Piezas de los widgets. | `CleanTop.qml` |
+| `Panel.qml` | Pieza de los widgets (fondo y borde de cada panel). | `CleanTop.qml` |
 | `fonts/`, `img/` | Bricolage Grotesque + Instrument Sans (TTF), íconos del clima, flechita ▼. | — |
 
 ### Archivos de LG modificados (`home-mod/`, bind-mount)
