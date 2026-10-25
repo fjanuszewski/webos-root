@@ -20,6 +20,10 @@ Este repo rootea una tele LG webOS (probado: LG 50UM7360, webOS 4.10.2) y le ins
 | Agente | `auditor-tele` | Revisa la tele **sin cambiar nada** y devuelve un resumen |
 | Agente | `revisor-privacidad` | Antes de publicar: busca datos personales o código de LG |
 
+Scripts útiles (`tools/`): `deploy-home.sh` y `deploy-saver.sh` suben cambios, `tvshot.sh` saca una captura de la
+tele, `modo-demo.sh on|off` pone calendario y fotos de mentira para capturas sin datos personales, `audit-run.sh`
+mide la tele. Los botones del control y el vigilante de apps están en `botones/` (ver `BOTONES.md` y `DEBLOAT.md`).
+
 Si la persona escribe con sus palabras ("no me conecta", "está lenta", "quiero cambiar las fotos"), elegí vos la herramienta que corresponde.
 
 ## Cómo hablarle a la persona
@@ -94,4 +98,10 @@ Con esa llave ya anda el camino de respaldo de `tvroot.sh`: SSH `prisoner@:9922`
 - **No confíes en suscripciones de luna a largo plazo**: después de que la tele "despierta" del quick start pueden quedar muertas sin avisar. Para decisiones que cierran cosas, preguntá en el momento (el vigilante cerraba YouTube creyendo que al frente estaba el HDMI).
 - Por SSH (dropbear con `-tt`), lo que se deja corriendo muere al cerrar la sesión: lanzalo con `setsid nohup … &`.
 - Algunas apps "tercas" (ej. la web de AirPlay) no se cierran con `closeByAppId`: hay que usar `luna://com.palm.webappmanager/killApp`.
+- **Con el inicio a la vista encima de una app, `getForegroundAppInfo` sigue diciendo la app** (ej. Netflix). Para saber si se ve el inicio: `/tmp/cytv-inicio-visible` ("1"/"0"), que escribe `CleanRecents.qml`.
+- **Memoria en QML:** los efectos de `QtGraphicalEffects` (`FastBlur`, etc.) arman copias de pantalla completa (el desenfoque del protector se comía ~60 MB). Y una animación continua hace redibujar la pantalla 60 veces por segundo (el zoom lento del protector: 30 % del procesador); para movimientos lentos, un `Timer` a 10 cuadros/s. Medí antes y después (`AUDITORIA.md`).
+- Matar `com.webos.app.inputcommon` cuando no está al frente es seguro: LG lo restaura en ~1 s (de su copia congelada, con el mismo pid) al elegir una entrada.
+- `tvroot.sh` no pasa la entrada estándar: `./tvroot.sh 'cat > archivo' < local` lo deja **vacío**. Para subir archivos, usá los `deploy-*.sh` o `ssh … 'cat > archivo' < local` directo.
+- Reiniciar la tele por SSH: `setsid nohup sh -c "sleep 2; reboot" &` (sin `setsid` se corta con la sesión y no reinicia).
+- Python de la tele (2.7): sin `threading`, `pty` ni `python -m`; usá `thread` y `os.openpty`. Si el archivo tiene acentos, primera línea `# -*- coding: utf-8 -*-`.
 - Qt 5.6: nada de `component X:` en línea, nunca una propiedad repetida en el mismo objeto (rompe el Home). Antes de subir QML: `python3 tools/qml-check.py`.

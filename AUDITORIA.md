@@ -108,3 +108,26 @@ Datos crudos posteriores: `audit/audit-20261023-1906.txt`, más mediciones suelt
 - Pendiente: el protector de fotos ocupa ~164 MB dentro de `inputcommon` mientras está activo. Ahora pide las fotos al tamaño de la pantalla; falta medir si libera la memoria al salir.
 - Pendiente (otra sesión): neutralizar el banner `Hero.qml`, que reintenta sin parar desde que se vació el caché de publicidad.
 Detalle de los cambios en [DEBLOAT.md](DEBLOAT.md) → "Fase 2".
+
+## 2026-10-25 — Segunda auditoría: menú, protector, vigilante y velocidad
+Memoria = RAM + swap de cada proceso. "Libre" = `MemAvailable`.
+
+| Qué | Medido | Comentario |
+|---|---|---|
+| Inicio original de LG (`fullhome` sin nuestros cambios) | 102 → 126 MB en 2,5 min | sigue subiendo con la publicidad |
+| Nuestro inicio, recién arrancado | 91,5 MB | con Configuración, Wi-Fi, widgets, tema, control remoto… |
+| Abrir Configuración, Wi-Fi, Widgets, Tema, Control remoto, apps | +2 a +5 MB en total | las pantallas ya están cargadas |
+| Protector de fotos en HDMI (antes) | entradas 83 → 174 MB; quedaban 109 al cerrarlo | `FastBlur` (~60 MB) + fotos a 1920 |
+| Protector de fotos en HDMI (ahora) | entradas 83 → 101 MB; vuelve a 83 al cerrarlo | detalle en SCREENSAVER.md |
+| Procesador con el protector (antes / ahora) | 30 % → **11 %** de toda la tele | movimiento a 10 cuadros/s en vez de 60 |
+| Vigilante de apps (antes / ahora) | 31,6 MB (Node) → **4,4 MB** junto con los botones | `botones/vigilante.py` |
+| Vigilante: procesador | 0,3 % de un núcleo | pregunta cada 5 s |
+| Netflix abierto atrás al volver al inicio | 60–90 MB que quedaban ocupados | ahora se cierra al minuto |
+| ThinQ (`iot-client`) y compartir pantalla (`ss.gateway`) | ~30 MB que reaparecían solos | el vigilante los vuelve a parar (si se eligió apagar la transmisión) |
+| Libre recién prendida | **426 MB** (al principio de todo: 138) | |
+| Botón HOME → inicio a la vista | 0,5–1 s | |
+| Reabrir la entrada HDMI después de cerrarla | ~1 s | LG la restaura de su copia congelada |
+
+Lo que se dejó como está: las copias congeladas de LG en `/tmp/checkpoint` (77 MB: hacen que las apps abran rápido),
+el teclado en pantalla (`MaliitServer`, 40 MB) y el motor de apps web (`WebAppMgr`, 50 MB): los usan apps que se usan.
+

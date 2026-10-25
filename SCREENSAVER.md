@@ -33,8 +33,33 @@ Ojo: si la entrada **tiene** señal (un aparato conectado con su propio protecto
 tools/deploy-saver.sh -          # sube todo, arma la lista, monta y reinicia inputcommon (sin captura)
 tools/tvshot.sh captura.png      # captura (en video/HDMI la parte de abajo puede salir negra: es la captura, no la tele)
 ```
-- Al prender: `init.d-50-cytv-debloat.sh` monta los dos archivos y arranca el loop de sync (al minuto y cada 6 h, pid en `/tmp/cleanhome-saver.pid`). El protector relee la lista cada hora.
+- Al prender: `init.d-50-cytv-debloat.sh` monta los dos archivos y arranca `cleanhome/bucles.sh` (lista nueva de fotos al minuto y cada 1 h; el álbum entero, cada 6 h). El protector relee la lista cada hora.
 - **Apagarlo**: crear `/var/lib/webosbrew/saver-mod/DISABLED` y reiniciar la tele (o `umount` de los dos archivos y matar `com.webos.app.inputcommon` / `com.webos.app.screensaver`).
+
+## Memoria y procesador (medido el 2026-10-25)
+Prueba: HDMI sin señal, misma lista de 24 fotos (12 verticales, 12 horizontales), foto nueva cada 10 s, 3 min.
+"Entradas" = el proceso `com.webos.app.inputcommon`, que muestra el HDMI y este protector (en reposo, ~83 MB).
+
+| Variante | Entradas con el protector | Después de cerrarlo |
+|---|---|---|
+| Original: fotos a 1920 + fondo de las verticales con `FastBlur` | hasta **174 MB** | 109 MB (no devuelve) |
+| Sin `FastBlur` | 117 MB | 90 MB |
+| Fotos a 1280 | 165 MB | 107 MB |
+| **Actual: sin `FastBlur` y fotos a 1280** | **101 MB** | **83 MB** (devuelve todo) |
+
+- El fondo desenfocado sigue: ahora es la misma foto a 40 px, ampliada (el suavizado de Qt la deja borrosa). El
+  `FastBlur` armaba varias copias de pantalla completa en memoria de video.
+- Movimiento lento (Ken Burns): con una animación normal, la tele redibuja la pantalla 60 veces por segundo.
+
+  | Movimiento | Procesador de toda la tele |
+  |---|---|
+  | Animación normal (60 cuadros/s) | 30 % |
+  | **Actual: 10 cuadros/s (`PhotoLayer.fps`)** | **11 %** |
+  | 5 cuadros/s | 10 % |
+  | Sin movimiento | 8 % |
+- Las sombras de arriba y abajo son rectángulos con degradé de Qt (antes `LinearGradient` del módulo de efectos).
+- Si igual queda memoria en las entradas, el vigilante (`botones/vigilante.py`) las cierra por detrás cuando no se
+  usan hace 2 min y pasan de 100 MB; LG las reabre en ~1 s al elegir una entrada.
 
 ## Gotchas
 - Los checkpoints CRIU: `inputcommon` arranca de `/tmp/checkpoint/com.webos.app.inputcommon` → hay que borrarlo y matar el proceso para que lea el archivo montado.

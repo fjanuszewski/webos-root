@@ -23,7 +23,7 @@ def ev(dias, h, m, dur, titulo, todo=False):
     ini = hoy + datetime.timedelta(days=dias, hours=0 if todo else h, minutes=0 if todo else m)
     fin = ini + (datetime.timedelta(days=1) if todo else datetime.timedelta(minutes=dur))
     return {"start": int(ini.timestamp() * 1000), "end": int(fin.timestamp() * 1000), "allDay": todo,
-            "day": ini.strftime("%Y-%m-%d"), "title": titulo, "location": "", "description": ""}
+            "day": ini.strftime("%Y-%m-%d"), "first": True, "title": titulo, "location": "", "description": ""}
 evs = [ev(-1, 18, 0, 60, "Clase de guitarra"), ev(0, 19, 30, 90, "Fútbol 5"), ev(0, 21, 0, 120, "Cena con amigos"),
        ev(1, 0, 0, 0, "Cumple de Ana", True), ev(1, 13, 0, 180, "Asado familiar"), ev(2, 10, 30, 45, "Dentista"),
        ev(3, 18, 0, 60, "Clase de inglés"), ev(4, 9, 0, 60, "Reunión de trabajo"), ev(5, 20, 0, 150, "Cine")]

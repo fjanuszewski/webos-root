@@ -1,6 +1,7 @@
 <div align="center">
   <h1>📺 webos-root</h1>
-  <p><strong>Rooteé mi tele LG vieja y le cambié la interfaz desde adentro.<br>Sin publicidad, con el doble de memoria libre y una pantalla de inicio a mi gusto.</strong></p>
+  <p><strong>Rooteé mi tele LG vieja y le cambié la interfaz desde adentro.<br>Sin publicidad, con el triple de memoria libre y una pantalla de inicio a mi gusto.</strong></p>
+  <img src="docs/img/recorrido.gif" alt="Recorrido por la pantalla de inicio, el listado de apps, Configuración, el control remoto y el protector de fotos" width="800">
   <p>
     <img alt="webOS" src="https://img.shields.io/badge/webOS-4.x-a50034">
     <img alt="Probado en" src="https://img.shields.io/badge/probado_en-LG_50UM7360-16294a">
@@ -29,7 +30,7 @@ Acá es al revés: **cambio la interfaz del propio sistema de LG.** La pantalla 
 Y no es solo lo que se ve:
 
 - 🚫 **Publicidad afuera.** Bloqueo los servidores de anuncios y seguimiento de LG. Hasta encontré que la pantalla de inicio reproducía **videos de publicidad escondidos**, aunque no se vieran.
-- 🧠 **Memoria.** Las apps ya no se abren solas, y cuando cambiás de app (o pasás a la consola) un vigilante cierra las que quedaron abiertas.
+- 🧠 **Memoria.** Las apps ya no se abren solas, y un vigilante cierra las que quedan abiertas atrás: cuando cambiás de app, cuando pasás a la consola o cuando dejás el inicio a la vista un minuto. Ocupa 4 MB (junto con los botones del control).
 - 🔌 **Servicios que no usás**, apagados. AirPlay, compartir pantalla y el audio Bluetooth son opcionales: la instalación te pregunta.
 - 🔐 **Que sobreviva a todo.** Un acceso propio de administrador que no depende del modo desarrollador de LG. Lo probé desenchufando la tele: en un minuto y medio vuelve todo solo.
 
@@ -37,33 +38,49 @@ Y no es solo lo que se ve:
 
 | | Antes | Después |
 |---|---|---|
-| Memoria libre | 138 MB | **377 MB** |
-| Procesador ocupado con la tele quieta | 69 % | **~26 %** |
+| Memoria libre | 138 MB | **426 MB** recién prendida · ~300 MB en uso |
+| Procesador ocupado con la tele quieta (protector de fotos andando) | 69 % | **~11 %** |
+| Pantalla de inicio | 126 MB (la de LG, y sigue subiendo con la publicidad) | **91 MB** con todo lo nuestro |
+| Protector de fotos | — | **+15 MB** mientras se ve, y los devuelve al cerrarse |
 | Apps abiertas sin usarlas | Netflix, YouTube, Asistente, Guía, AirPlay | **ninguna** |
 | Publicidad en la pantalla de inicio | sí (hasta videos ocultos) | **no** |
+| Botón HOME | — | el inicio aparece en **0,5–1 s** |
 | Después de un corte de luz | — | **queda todo igual** |
+
+Cómo se midió cada cosa: [AUDITORIA.md](AUDITORIA.md) y [SCREENSAVER.md](SCREENSAVER.md).
 
 Y de yapa:
 
 - 🏠 **Pantalla de inicio a mi gusto**: reloj, clima, dólar y Bitcoin, el calendario de la familia, mis últimas apps, la lista completa de apps y un panel de entradas. Todo con el control remoto.
-- 🖼️ **Protector de pantalla con fotos** de un álbum compartido de Google Photos, de a una al azar y sin guardarlas en la tele.
+- 🖼️ **Protector de pantalla con fotos** de un álbum compartido de Google Photos, de a una al azar y sin guardarlas en la tele. Recorre el álbum **entero** (aunque tenga miles de fotos): cada hora toma 300 que todavía no salieron.
 - ⚙️ **Configuración propia** desde el engranaje de arriba, con el mismo estilo que el panel de entradas, y un acceso a los ajustes de LG.
 - 🧩 **Widgets a tu gusto**: en Configuración → Widgets elegís qué widgets van en el inicio (clima, mercados, calendario… y los que se sumen), dónde y de qué tamaño, en una cuadrícula de 4 × 4.
 - 🎨 **Tema**: fondo con los colores de la app elegida, un color fijo o **tu propia foto**; color de los paneles, color de lo seleccionado y tamaño de letra.
 - 🖼️ **Protector editable sobre la pantalla misma**: elegís qué va en cada parte (hora, fecha, clima, eventos del calendario, fecha de la foto… o nada) y de qué tamaño.
+- 🎮 **Botones del control con otra función**: en Configuración → Control remoto elegís qué hace NETFLIX, Prime Video, los cuatro colores, MOVIES, ▶ y ⏸ (abrir una app, ir a una entrada, abrir una página, apagar solo la pantalla, temporizador, volumen fijo…). O desde el listado de apps: mantené OK → **Asignar a un botón** y tocá el botón. Detalle en [BOTONES.md](BOTONES.md).
 - 📶 **Wi-Fi que se acuerda de tus redes**: lista de redes que se actualiza sola, conexión sin volver a escribir la contraseña y, si se corta el wifi, **se reconecta solo** a la última red (o a la siguiente guardada que esté al alcance). Las contraseñas quedan solo en la tele, nunca en el repo. **Es opcional:** si no querés que tus claves queden guardadas en la tele, decíselo a Claude y no se activa.
 
 > ✅ **Todo es opcional.** Al instalar, Claude te pregunta qué querés activar y qué no (fotos, calendario, Wi-Fi que guarda claves, AirPlay, Bluetooth). Si después cambiás de idea, pedíselo y lo prende o lo apaga.
 
 ## 📸 Capturas
 
-Las voy subiendo a medida que las saco.
+Sacadas de la tele con `tools/tvshot.sh` y el modo demostración (`tools/modo-demo.sh`: calendario inventado y fotos libres de [picsum.photos](https://picsum.photos)). Los nombres de redes y el enlace del álbum están tapados.
 
-<!-- Guardar las imágenes en docs/img/ (capturas/ es privada y no se publica) y enlazarlas acá:
-| Pantalla de inicio | Protector de fotos |
+| Pantalla de inicio | Listado de apps |
 |---|---|
-| ![Pantalla de inicio](docs/img/inicio.png) | ![Protector](docs/img/protector.png) |
--->
+| ![Pantalla de inicio](docs/img/inicio.png) | ![Listado de apps](docs/img/apps.png) |
+| **Configuración** | **Control remoto** |
+| ![Configuración](docs/img/configuracion.png) | ![Control remoto](docs/img/control-remoto.png) |
+| **Qué hace cada botón** | **Asignar una app a un botón** |
+| ![Opciones de un botón](docs/img/control-opciones.png) | ![Asignar a un botón](docs/img/asignar-boton.png) |
+| **Widgets** | **Tema** |
+| ![Widgets](docs/img/widgets.png) | ![Tema](docs/img/tema.png) |
+| **Entradas** | **Clima por hora** |
+| ![Entradas](docs/img/entradas.png) | ![Clima](docs/img/clima.png) |
+| **Protector de fotos** | **Protector editable** |
+| ![Protector](docs/img/protector.jpg) | ![Editor del protector](docs/img/editor-protector.jpg) |
+| **Wi-Fi** | **Menú de una app** |
+| ![Wi-Fi](docs/img/wifi.png) | ![Menú de una app](docs/img/menu-app.png) |
 
 ## 🚀 Cómo hacerlo en tu tele
 
@@ -139,6 +156,7 @@ Lo probé en una sola tele, la mía. La idea es que esta tabla la vayamos llenan
 | `hosts.block` | Lista de bloqueo de publicidad y seguimiento |
 | `tools/` | Scripts para instalar todo, subir cambios y medir la tele |
 | `design/launcher.html` | Vista previa de la pantalla de inicio, para abrir en el navegador |
+| `docs/img/` | Capturas y la animación de este README |
 
 <details>
 <summary><strong>📚 Documentación técnica</strong></summary>
@@ -149,7 +167,8 @@ Lo probé en una sola tele, la mía. La idea es que esta tabla la vayamos llenan
 | [DEBLOAT.md](DEBLOAT.md) | Qué se apaga, por qué y cuánto ahorra |
 | [AUDITORIA.md](AUDITORIA.md) | La medición de antes y después, proceso por proceso |
 | [HOME-MOD.md](HOME-MOD.md) | Cómo está hecha la pantalla de inicio |
-| [SCREENSAVER.md](SCREENSAVER.md) | Cómo funciona el protector de fotos |
+| [SCREENSAVER.md](SCREENSAVER.md) | Cómo funciona el protector de fotos (y cuánta memoria y procesador usa) |
+| [BOTONES.md](BOTONES.md) | Los botones del control con otra función |
 | [COMANDOS.md](COMANDOS.md) | Comandos para el día a día |
 
 </details>

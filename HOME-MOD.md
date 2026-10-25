@@ -156,3 +156,14 @@ El engranaje de la barra de arriba abre `cleanhome/CleanSettings.qml` (Loader `c
 - **Configuración → Widgets** (`WidgetsEditor.qml`): casillas con flechas o puntero; OK en un widget → tamaños, Mover (flechas + OK; ATRÁS cancela), Quitar; OK en una vacía o el botón fijo "Agregar widget" → los que faltan. Al mover, agrandar o agregar, los demás se acomodan solos con `Settings.gridRelayout()`: al lugar libre más cercano y, si no entran, a un tamaño menor (prueba combinaciones con un límite de 3000 intentos); si no entran de ninguna forma quedan afuera y se avisa. La fila de apps recientes y la flechita aparecen recién cuando la parte de arriba tiene su alto (sin saltos al arrancar) y `CleanTop` se carga sincrónico. Guarda en cada cambio y avisa con `mainView.cleanRev` (propiedad nueva en `MainView.qml`), que hace releer los ajustes a CleanTop, CleanGlow, CleanRecents y CleanDrawer.
 - **Configuración → Tema** (`ThemeEditor.qml`, `Swatch.qml`): `settings.json → theme = { bg: dynamic|color|photo, bgColor, photo, photoDim, panel: dark|gray|clear, accent, font: s|m|l }`. El fondo lo dibuja `CleanGlow.qml`; los paneles toman `Settings.panelColor()`; el borde de lo elegido (widgets, días del calendario, apps) usa `accent`; la letra de los widgets se multiplica por `Settings.fontFactor()`.
 - **Fotos de fondo**: carpeta `/var/lib/webosbrew/fondos/` (la crea `deploy-home.sh`). Se suben con `tools/subir-fondo.sh foto.jpg` (achica a 1920 y simplifica el nombre) o dejándolas en `fondos/` del repo (no se publica) antes de `reinstalar-todo.sh`. `bucles.sh` arma `fondos/index.json` cada 30 s.
+
+## Control remoto y "Asignar a un botón" (2026-10-24/25)
+- **Configuración → Control remoto** (`RemoteEditor.qml`, `RemoteDrawing.qml`, `botones.js`): el dibujo del Magic
+  Remote MR20 (`img/control-mr20.png`, sacado de la vista previa) con los 9 botones que se pueden cambiar; la lista a la
+  derecha y, con OK, la ventanita de opciones. Lo elegido va a `cleanhome/botones.json`, que lee `botones/botones.py`.
+- **Listado de apps → mantener OK → Asignar a un botón** (`CleanAppMenu.qml`): abre el mismo editor en "modo elegir"
+  (`/tmp/cytv-botones-captura`); el próximo botón que se toca no hace nada y queda asignado a esa app.
+- "Abrir una app" usa el mismo listado de apps en modo "elegir" (`CleanDrawer.openPick()`); "Abrir un panel" deja una
+  nota (`/tmp/cytv-abrir-panel`) que cada panel lee al aparecer el inicio.
+- Detalle del programa, cómo se mide un botón nuevo y cómo apagarlo: [BOTONES.md](BOTONES.md).
+- El inicio también anota si está a la vista (`/tmp/cytv-inicio-visible`, desde `CleanRecents.qml`) para el vigilante.
