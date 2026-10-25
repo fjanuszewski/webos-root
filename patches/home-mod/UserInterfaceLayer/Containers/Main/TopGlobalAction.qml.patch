@@ -1,0 +1,111 @@
+--- original/UserInterfaceLayer/Containers/Main/TopGlobalAction.qml
++++ modificado/UserInterfaceLayer/Containers/Main/TopGlobalAction.qml
+@@ -27,7 +27,8 @@
+ 
+         if (topGlobalActions && Array.isArray(topGlobalActions)) {
+             buttonList = topGlobalActions.filter(function (item) {
+-               if (item.showButton) return true;
++               // CleanYourTV: sin campana de notificaciones (el centro de notificaciones no se usa)
++               if (item.showButton && item.type !== "notifications") return true;
+             });
+         }
+ 
+@@ -36,6 +37,11 @@
+ 
+     property bool isAccountLogin: systemProperties.currentUserId !== ""
+ 
++    // CleanYourTV: botón "Entradas" (queda a la izquierda de la lupa: la barra va de derecha a izquierda)
++    property var cleanInputsItem: ({ "type": "inputs", "label": "Entradas", "buttonText": "", "showButton": true, "onClick": { "targetAppId": "com.webos.app.quickinputpicker" } })
++    // CleanYourTV: botón del protector de pantalla (entre Entradas y Buscar); abre su ventana (CleanDetail "saver")
++    property var cleanSaverItem: ({ "type": "saver", "label": "Protector de pantalla", "buttonText": "", "showButton": true, "onClick": { "targetAppId": "" } })
++
+     width: parent.width
+     height: parent.height
+ 
+@@ -126,7 +132,7 @@
+                 buttonType: s_type
+                 bClickEffect: true
+ 
+-                text: barDelegate.dataObj.buttonText
++                text: barDelegate.dataObj.type === "inputs" ? "" : barDelegate.dataObj.buttonText // CleanYourTV
+                 textFont: fontManager.sandstone_Dingbat
+                 fontSize: styleSheet.getRValue(30)
+ 
+@@ -147,6 +153,17 @@
+                     launchTopGlobalAction(barDelegate.dataObj);
+                 }
+             }
++
++            // CleanYourTV: íconos propios de Entradas y del protector (claro / oscuro cuando tiene el foco)
++            Image {
++                anchors.centerIn: parent
++                width: styleSheet.getRValue(34); height: styleSheet.getRValue(34)
++                property string kind: barDelegate.dataObj && (barDelegate.dataObj.type === "inputs" || barDelegate.dataObj.type === "saver") ? barDelegate.dataObj.type : ""
++                visible: kind !== ""
++                source: !visible ? "" : "file:///var/lib/webosbrew/cleanhome/img/" + (kind === "inputs" ? "input" : "saver") +
++                                         (barButton.hasFocus ? "-dark.png" : "-light.png")
++                smooth: true
++            }
+         }
+ 
+     Item {
+@@ -237,6 +254,9 @@
+             item.buttonText = updateButtonText(item);
+             topGlobalActionModel.append({"entry": item});
+         });
++        // CleanYourTV: la barra se arma de derecha a izquierda: Ajustes, Buscar, Protector, Entradas
++        topGlobalActionModel.append({"entry": root.cleanSaverItem});
++        topGlobalActionModel.append({"entry": root.cleanInputsItem});
+     }
+ 
+     function startUpdateTopGlobalActionModel() {
+@@ -245,9 +265,15 @@
+             topGlobalActionModel.set(index, {"entry": item});
+         });
+ 
+-        if (topGlobalActionModel.count > topButtonList.length) {
+-            topGlobalActionModel.remove(topButtonList.length, topGlobalActionModel.count - topButtonList.length);
++        // CleanYourTV: Protector y Entradas van siempre últimos (a la izquierda); no se borran al actualizar
++        var extra = [root.cleanSaverItem, root.cleanInputsItem];
++        for (var e = 0; e < extra.length; e++) {
++            if (topGlobalActionModel.count > topButtonList.length + e) topGlobalActionModel.set(topButtonList.length + e, {"entry": extra[e]});
++            else topGlobalActionModel.append({"entry": extra[e]});
+         }
++        if (topGlobalActionModel.count > topButtonList.length + extra.length) {
++            topGlobalActionModel.remove(topButtonList.length + extra.length, topGlobalActionModel.count - topButtonList.length - extra.length);
++        }
+     }
+ 
+     function updateButtonText(obj) {
+@@ -291,8 +317,30 @@
+             }
+             break;
+         case "settings":
+-            interfaces.application.goToSettingsMain();
++            // CleanYourTV: panel Configuración propio (Wi-Fi que recuerda redes + "Configuración de la tele" → la de LG).
++            // Si no cargó, la configuración de LG como siempre.
++            if (uiController.mainView && uiController.mainView.cleanSettings && uiController.mainView.cleanSettings.item) {
++                uiController.mainView.cleanSettings.item.open();
++            } else {
++                interfaces.application.goToSettingsMain();
++            }
+             break;
++        case "saver":
++            // CleanYourTV: ventana del protector de pantalla (álbum, encendido, segundos por foto, "Ver ahora", "Editar")
++            if (uiController.mainView && uiController.mainView.cleanDetail && uiController.mainView.cleanDetail.item) {
++                uiController.mainView.cleanDetail.item.open("saver", {});
++            }
++            break;
++        case "inputs":
++            // CleanYourTV: selector de entradas nativo de LG (el mismo de la tecla INPUT del control)
++            // Panel propio con los dispositivos conectados (el selector rápido de LG cambiaba directo al HDMI).
++            // Si el panel no cargó, se usa el selector rápido de LG como respaldo.
++            if (uiController.mainView && uiController.mainView.cleanInputs && uiController.mainView.cleanInputs.item) {
++                uiController.mainView.cleanInputs.item.open();
++            } else {
++                interfaces.application.services.launchSystemUI({"appId": "com.webos.app.quickinputpicker"});
++            }
++            break;
+         default:
+             // Nothing to do
+             break;

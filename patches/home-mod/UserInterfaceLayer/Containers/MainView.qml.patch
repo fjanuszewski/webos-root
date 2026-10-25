@@ -1,0 +1,261 @@
+--- original/UserInterfaceLayer/Containers/MainView.qml
++++ modificado/UserInterfaceLayer/Containers/MainView.qml
+@@ -21,8 +21,15 @@
+ 
+     id: root
+ 
++
+     property var main
+     property alias shelfList: shelfList
++    property alias cleanInputs: cleanInputs // CleanYourTV: panel de Entradas (lo abre TopGlobalAction)
++    property alias cleanDetail: cleanDetail // CleanYourTV: ventana de detalle de los paneles (la abre CleanTop)
++    property alias cleanSettings: cleanSettings // CleanYourTV: panel Configuración propio (Wi-Fi + Configuración de la tele)
++    property alias cleanAppMenu: cleanAppMenu // CleanYourTV: opciones al mantener apretada una app (Abrir, Quitar de recientes, Eliminar)
++    property alias cleanDrawer: cleanDrawer // CleanYourTV: listado de apps (Control remoto lo usa para elegir qué app abre un botón)
++    property int cleanRev: 0 // CleanYourTV: Configuración lo incrementa al guardar widgets o tema; las piezas de cleanhome/ releen settings.json
+     property alias topArea: topArea
+     property alias editMenu: editMenuLoader.item
+     property alias settingPopup: settingPopup
+@@ -165,9 +172,9 @@
+                     anchors.left: parent.left
+                     fillMode: Image.PreserveAspectFit
+                     sourceSize: Qt.size(width, height)
+-                    source: !visible ? "" : systemProperties.getImageUrl("bg_network.png")
++                    source: "" // CleanYourTV: sin fondo de LG (base negra; el color lo pone CleanGlow)
+                     cache: false
+-                    visible: (systemProperties.isTopShelfGuide && !uiController.isEditMode) === true && uiController.isFullHome
++                    visible: false // CleanYourTV
+                 }
+             }
+ 
+@@ -197,10 +204,10 @@
+                     anchors.left: parent.left
+                     fillMode: Image.PreserveAspectFit
+                     sourceSize: Qt.size(width, height)
+-                    source: systemProperties.isRTLLocale ? systemProperties.getImageUrl("banner_image_02_rtl.png") :systemProperties.getImageUrl("banner_image_02.png")
++                    source: "" // CleanYourTV: sin banner "webOS" de LG (se veía antes de que cargue el color de la app)
+                     cache: false
+                     opacity: (systemProperties.isCheckAdvertisement || !systemProperties.homePromotionOn || !systemProperties.networkConnected) ? 1 : 0.7
+-                    visible: (!systemProperties.isTopShelfGuide && systemProperties.isNoAdvertisement && !uiController.isEditMode) === true && uiController.isFullHome && (shelfListContainer.state === "app" || interfaces.application.isDefaultShelfList)
++                    visible: false // CleanYourTV
+ 
+                 }
+             }
+@@ -355,6 +362,29 @@
+             console.log("shelfListContainer state : "+shelfListContainer.state);
+         }
+ 
++        // CleanYourTV: fondo que se tiñe con el color de la app enfocada.
++
++        // Va acá (después de los fondos negros del Home y antes del contenido) para que se vea.
++
++        Loader {
++
++            id: cleanGlow
++
++            anchors.fill: parent
++
++            source: "file:///var/lib/webosbrew/cleanhome/CleanGlow.qml"
++
++            onLoaded: { item.drawer = Qt.binding(function () { return cleanDrawer.item; }); item.recents = Qt.binding(function () { return cleanRecents.item; }); }
++
++            onStatusChanged: {
++
++                if (status === Loader.Error) console.log("CleanYourTV: CleanGlow.qml no cargó");
++
++            }
++
++        }
++
++
+         ListView {
+ 
+             id: topArea
+@@ -740,7 +770,7 @@
+             objectName: "appListArea"
+ 
+             width: parent.width
+-            height: uiController.isEditMode && editMenu.state === "appEditPage" ? styleSheet.getShelfContentsSize("HOME_SH_APPS", "").height : styleSheet.getRValue(126)
++            height: uiController.isEditMode && editMenu.state === "appEditPage" ? styleSheet.getShelfContentsSize("HOME_SH_APPS", "").height : styleSheet.getRValue(180) // CleanYourTV: fila de 5 apps recientes
+             x: 0
+             y: topArea.y + topArea.height
+             z: 1
+@@ -763,13 +793,38 @@
+             }
+             Keys.onDownPressed: {
+                 systemProperties.lastKeyEvent = event.key;
+-                if(!root.isHalfMode && !uiController.isEditMode) {
++                // CleanYourTV: si hay filas debajo, bajar a ellas; si no, abrir el cajón con todas las apps
++                if(!root.isHalfMode && !uiController.isEditMode && shelfList.count > 0) {
+                     shelfList.forceActiveFocus();
++                } else if(appListArea.cleanRecentsActive && cleanDrawer.status === Loader.Ready) {
++                    cleanDrawer.item.open();
+                 }
+             }
++
++            // CleanYourTV: flechita que indica que bajando se ven todas las apps
++            Image {
++                id: cleanMoreHint
++                anchors.horizontalCenter: parent.horizontalCenter
++                anchors.top: parent.bottom
++                anchors.topMargin: styleSheet.getRValue(14) + cleanHintBounce
++                width: styleSheet.getRValue(48); height: styleSheet.getRValue(24)
++                source: "file:///var/lib/webosbrew/cleanhome/img/chevron.png"
++                // aparece junto con la fila de apps (no antes, mientras carga la parte de arriba)
++                opacity: 0.55 * cleanRecents.opacity
++                visible: appListArea.cleanRecentsActive && !(cleanDrawer.item && cleanDrawer.item.opened)
++                property real cleanHintBounce: 0
++                SequentialAnimation on cleanHintBounce {
++                    running: cleanMoreHint.visible
++                    loops: Animation.Infinite
++                    NumberAnimation { to: styleSheet.getRValue(8); duration: 700; easing.type: Easing.InOutSine }
++                    NumberAnimation { to: 0; duration: 700; easing.type: Easing.InOutSine }
++                }
++            }
+             onActiveFocusChanged: {
+                 if(activeFocus) {
+-                    appListLoader.forceActiveFocus();
++                    // CleanYourTV: el foco va a la fila de apps recientes (si cargó); si no, a la nativa de LG
++                    if (appListArea.cleanRecentsActive) cleanRecents.item.forceActiveFocus();
++                    else appListLoader.forceActiveFocus();
+                     if(systemProperties.isTopShelfGuide) {
+                         shelfListContainer.state = "topShelfGuide";
+                     } else {
+@@ -785,8 +840,26 @@
+                 }
+             }
+ 
++            // CleanYourTV: primera fila = últimas 5 apps usadas. Solo en el Home completo y si ya tiene apps;
++            // en modo mitad (HOME desde una app), edición o si falla, se usa la fila nativa de LG.
++            property bool cleanRecentsActive: cleanRecents.status === Loader.Ready && !root.isHalfMode && root.state !== "half" && !uiController.isEditMode
++                                              && cleanRecents.item.apps && cleanRecents.item.apps.length > 0
+             Loader {
++                id: cleanRecents
++                anchors.fill: parent
++                visible: appListArea.cleanRecentsActive
++                // Aparece recién cuando la parte de arriba (widgets) ya tiene su alto: si no, la fila se dibujaba
++                // arriba de todo y "bajaba" al cargar los widgets. Entra con un fundido corto, ya en su lugar.
++                opacity: (root.isHalfMode || topArea.height > styleSheet.getRValue(300)) ? 1 : 0
++                Behavior on opacity { NumberAnimation { duration: 250 } }
++                source: "file:///var/lib/webosbrew/cleanhome/CleanRecents.qml"
++                onStatusChanged: {
++                    if (status === Loader.Error) console.log("CleanYourTV: CleanRecents.qml no cargó");
++                }
++            }
+ 
++            Loader {
++
+                 id: appListLoader
+ 
+                 objectName: "appListLoader"
+@@ -803,7 +876,8 @@
+                 anchors.fill: parent
+                 source: entry ? entry.component : ""
+                 enabled: true
+-                visible: root.isHalfMode ? true : topArea.topShelfLoaded
++                // CleanYourTV: se oculta cuando se muestra la fila de apps recientes (un solo "visible": si se repite, MainView no compila)
++                visible: !appListArea.cleanRecentsActive && (root.isHalfMode ? true : topArea.topShelfLoaded)
+ 
+                 transformOrigin: Item.Left
+ 
+@@ -1776,6 +1850,19 @@
+     }
+ 
+     function wheelScroll(delta) {
++        // CleanYourTV: la ruedita del control actúa como las flechas. Antes, para abajo pasaba a la lista de
++        // secciones de LG (que dejamos vacía) y mostraba una pantalla en blanco.
++        //   abajo  → abre la lista completa de apps (como ▼ desde la fila de recientes)
++        //   arriba → sube a los paneles (como ▲); con la lista abierta, la maneja CleanDrawer
++        if (appListArea.cleanRecentsActive && cleanDrawer.status === Loader.Ready) {
++            shelfListContainer.processingWheel = false;
++            if (delta < 0) {
++                if (!cleanDrawer.item.opened) cleanDrawer.item.open();
++            } else if (!cleanDrawer.item.opened) {
++                topArea.forceActiveFocus();
++            }
++            return;
++        }
+         if(delta < 0) {
+             if(shelfListContainer.state === "app") {
+                 shelfListContainer.processingWheel = true;
+@@ -2485,5 +2572,80 @@
+ 
+         interfaces.application.createAlert(params);
+         appListArea.forceActiveFocus();
++    }
++
++    // CleanYourTV: cajón de apps a pantalla completa. Se carga aparte: si falla, el Home sigue andando.
++    Loader {
++        id: cleanDrawer
++        anchors.fill: parent
++        z: 1000
++        source: "file:///var/lib/webosbrew/cleanhome/CleanDrawer.qml"
++        onStatusChanged: {
++            if (status === Loader.Error) console.log("CleanYourTV: CleanDrawer.qml no cargó");
++        }
++    }
++    Connections {
++        target: cleanDrawer.item
++        ignoreUnknownSignals: true
++        onCloseRequested: appListArea.forceActiveFocus()
++    }
++
++    // CleanYourTV: panel de Entradas (TV, HDMI con nombre del equipo, AV...). Al cerrar vuelve a la barra de arriba.
++    Loader {
++        id: cleanInputs
++        anchors.fill: parent
++        z: 1001
++        source: "file:///var/lib/webosbrew/cleanhome/CleanInputs.qml"
++        onStatusChanged: {
++            if (status === Loader.Error) console.log("CleanYourTV: CleanInputs.qml no cargó");
++        }
++    }
++    Connections {
++        target: cleanInputs.item
++        ignoreUnknownSignals: true
++        onCloseRequested: topArea.forceActiveFocus()
+     }
++
++    // CleanYourTV: ventana de detalle de los paneles (calendario del día, clima por hora, mercados). Al cerrar,
++    // el foco vuelve a la parte de arriba y TopShelf lo devuelve al panel que estaba elegido.
++    Loader {
++        id: cleanDetail
++        anchors.fill: parent
++        z: 1002
++        source: "file:///var/lib/webosbrew/cleanhome/CleanDetail.qml"
++        onStatusChanged: {
++            if (status === Loader.Error) console.warn("CleanYourTV: CleanDetail.qml no cargó: " + (cleanDetail.sourceComponent ? cleanDetail.sourceComponent.errorString() : "?"));
++        }
++    }
++    Connections {
++        target: cleanDetail.item
++        ignoreUnknownSignals: true
++        onCloseRequested: topArea.forceActiveFocus()
++    }
++
++    // CleanYourTV: panel "Configuración" (lo abre el engranaje de arriba): Wi-Fi que recuerda redes + acceso a la de LG
++    Loader {
++        id: cleanSettings
++        anchors.fill: parent
++        z: 1003
++        source: "file:///var/lib/webosbrew/cleanhome/CleanSettings.qml"
++        onStatusChanged: {
++            if (status === Loader.Error) console.warn("CleanYourTV: CleanSettings.qml no cargó: " + (cleanSettings.sourceComponent ? cleanSettings.sourceComponent.errorString() : "?"));
++        }
++    }
++    Connections {
++        target: cleanSettings.item
++        ignoreUnknownSignals: true
++        onCloseRequested: topArea.forceActiveFocus()
++    }
++    // CleanYourTV: opciones de una app (OK sostenido o click largo en recientes o en la lista de apps)
++    Loader {
++        id: cleanAppMenu
++        anchors.fill: parent
++        z: 1004
++        source: "file:///var/lib/webosbrew/cleanhome/CleanAppMenu.qml"
++        onStatusChanged: {
++            if (status === Loader.Error) console.warn("CleanYourTV: CleanAppMenu.qml no cargó: " + (cleanAppMenu.sourceComponent ? cleanAppMenu.sourceComponent.errorString() : "?"));
++        }
++    }
+ }

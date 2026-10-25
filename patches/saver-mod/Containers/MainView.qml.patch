@@ -1,0 +1,91 @@
+--- original/Containers/MainView.qml
++++ modificado/Containers/MainView.qml
+@@ -60,38 +60,48 @@
+             item.playing = true;
+         }
+ 
++        // [cytv] versión original (con publicidad en adImageView) en saver-backup/Containers/MainView.qml.
++        // Con las fotos andando no hace falta el protector de LG; sin fotos, burbujas. Nunca publicidad.
+         function reload() {
+-            if (loader.sourceComponent === adImageView) {
+-                item.playing = false;
+-                restScreenSaverCount = interfaces.ad.screenSaverCount;
++            if (root.cleanReady || !root.cytvFallback) {
++                loader.sourceComponent = undefined;
++                return;
+             }
+-
+-            if (restScreenSaverCount === 0 && !partial && interfaces.ad.isAvailableAd) {
+-                loader.sourceComponent = adImageView;
+-                if (!startAdScreenSaver) {
+-                    printLog("[AD]start adScreenSaverTimer");
+-                    adScreenSaverTimer.start();
+-                    startAdScreenSaver = true;
+-                }
+-
+-                printLog("[AD]adImageView");
+-            } else if (restScreenSaverCount === 0 && !partial && interfaces.ad.isAvailableCheckAd) {
+-                loader.sourceComponent = mode1;
+-                interfaces.ad.checkAd();
+-            } else {
+-                loader.sourceComponent = mode1;
+-            }
+-
++            loader.sourceComponent = mode1;
+             active = false;
+             active = true;
+-
+-            if (restScreenSaverCount > 0) {
+-                printLog("[AD]restCount : " + restScreenSaverCount);
+-                restScreenSaverCount--;
+-            }
+         }
++    }
++
++    // [cytv] Protector con fotos del álbum de Google Photos (cleanhome/CleanSaver.qml).
++    // Mientras carga, negro. El protector de LG (burbujas) queda de respaldo solo si en
++    // 20 s no hay fotos en la lista o si es el protector chico (partial), donde el nuestro no se usa.
++    property bool cleanReady: cleanSaver.status === Loader.Ready && cleanSaver.item.photoCount > 0
++    property bool cytvWaitDone: false
++    // (no se usa Loader.Error: puede marcar "error" un instante aunque después carga bien)
++    property bool cytvFallback: root.partial || cytvWaitDone
++    onCleanReadyChanged: {
++        printLog("[cytv] cleanReady " + cleanReady);
++        if (cleanReady) loader.sourceComponent = undefined;
++        else if (state === "Mode_ScreenSaver" && cytvFallback) loader.sourceComponent = mode1;
+     }
++    onCytvFallbackChanged: if (cytvFallback && !cleanReady && state === "Mode_ScreenSaver") loader.sourceComponent = mode1
++    Timer {
++        interval: 20000
++        running: root.state === "Mode_ScreenSaver" && !root.cleanReady && !root.cytvWaitDone
++        onTriggered: { printLog("[cytv] CleanSaver tarda: burbujas de respaldo"); root.cytvWaitDone = true; }
++    }
+ 
++    Loader {
++        id: cleanSaver
++        anchors.fill: parent
++        z: 10
++        visible: root.cleanReady
++        active: root.state === "Mode_ScreenSaver" && !root.partial
++        source: active ? "file:///var/lib/webosbrew/cleanhome/CleanSaver.qml" : ""
++        onStatusChanged: if (status === Loader.Error) printLog("[cytv] CleanSaver no cargó")
++    }
++
+     Component {
+ 
+         id: mode1
+@@ -132,12 +142,12 @@
+ 
+     onStateChanged: {
+         printLog("MainView onStateChanged state: " + state);
++        if (state !== "Mode_ScreenSaver") cytvWaitDone = false;   // [cytv]
+         switch(state) {
+         case "Mode_ScreenSaver":
+             pigMasker.visible = false;
+             rootWindow.color = "black";
+-            loader.sourceComponent = mode1;
+-            interfaces.ad.checkDeviceAuth();
++            loader.sourceComponent = root.cleanReady || !root.cytvFallback ? undefined : mode1;   // [cytv] sin checkDeviceAuth (publicidad); mientras carga el nuestro, negro
+             break;
+         case "Mode_PIG":
+             pigMasker.visible = true;

@@ -1,0 +1,15 @@
+--- original/Model/ShelfList.js
++++ modificado/Model/ShelfList.js
+@@ -304,6 +304,12 @@
+         key: "_filterShelfItem",
+         value: function _filterShelfItem() {
+             var self = this;
++            // CleanYourTV: dejar solo la barra superior (TOP, estructural) y la fila de apps.
++            // Todo lo demas (ads, recomendaciones, dashboard y shelves que manda el servidor de LG) afuera.
++            var _cytvAllowed = ["HOME_SH_TOP", "HOME_SH_APPS"];
++            this._shelfData = this._shelfData.filter(function (item) {
++                return _cytvAllowed.indexOf(item.shelfId) !== -1;
++            });
+             if (this.appInterfaces.currentState === "half") {
+                 var appListRank = 2;
+                 this._shelfData.some(function (el) {

@@ -1,0 +1,92 @@
+--- original/TvComponent/ScreenSaver/Screensaver.qml
++++ modificado/TvComponent/ScreenSaver/Screensaver.qml
+@@ -1,3 +1,7 @@
++// [cytv] Screensaver.qml modificado — cartel del protector de las entradas (HDMI sin señal, etc.).
++// Cambios: el cartel se esconde solo a los 10 s (ver cytvTextHidden), y la ruedita y las teclas le avisan al botón
++// "✎ Editar protector" (cleanhome/SaverEditBar.qml, lo crea PhotoSlide.qml) para que aparezca; OK lo abre.
++// Original de LG en .originales/.
+ import QtQuick 2.6
+ import "../../View"
+ import "../../Model/ScreensaverViewModel.js" as ViewModel
+@@ -44,6 +48,33 @@
+     property real   _yGap               : mainViewRoot.getRelativeHeight(50)
+ 
+     property bool   isPhotoRunning      : false
++
++    // [cytv] El cartel ("Sin señal" y los demás) se esconde solo a los 10 s: el mensaje ya se entendió y así no
++    // tapa las fotos. Vuelve 10 s más al aparecer de nuevo el protector, al cambiar el mensaje o con una tecla.
++    property bool   cytvTextHidden      : false
++    Timer {
++        id: cytvTextTimer
++        interval: 10000
++        onTriggered: screensaverRoot.cytvTextHidden = true
++    }
++    function cytvShowText() {
++        cytvTextHidden = false;
++        cytvTextTimer.restart();
++    }
++
++    // [cytv] "✎ Editar protector" vive en cleanhome/SaverEditBar.qml (encima de la zona del puntero de LG, que esta
++    // parte no ve). Acá solo se le avisa de la ruedita (hay que anotarse con registerMouseWheelEvent) y de las teclas.
++    property bool   cytvWheelOn         : false
++    function cytvPhoto() { return components.photoSlide ? components.photoSlide : null; }
++    function mouseWheel(delta) {
++        var p = cytvPhoto();
++        if (p) p.cytvPoke();
++        return false;       // la ruedita sigue llegando a los demás (volumen, etc.)
++    }
++    function cytvSetWheel(on) {
++        if (on && !cytvWheelOn) { registerMouseWheelEvent(Qt.rect(0, 0, 1920, 1080)); cytvWheelOn = true; }
++        else if (!on && cytvWheelOn) { deregisterMouseWheelEvent(); cytvWheelOn = false; }
++    }
+     property bool   activated           : globalVars.appStatus.isAppActivated
+     property var    increaseWidthList   : ["af-ZA","am-ET","es-CO","es-ES","et-EE","fr-CA", "tr-TR","th-TH","sv-SE","ru-RU","pt-PT","pl-PL","fa-IR","it-IT","ku-Arab-IQ","mk-MK","ar-SA"]
+     property var    keySet: [ globalVars.keyCodes.webOS_Red, globalVars.keyCodes.webOS_Num0, globalVars.keyCodes.webOS_Num1,
+@@ -95,7 +126,7 @@
+         }
+         height: photoHeader.height + textGap + photoBody.contentHeight + vMargin*2 + keyhelpVMargin + toggleKeyHelp.height
+ //        radius: mainViewRoot.getRelativeHeight(120)
+-        visible: guideAreaVisible && textBoxOverPhotoVisibleCondition
++        visible: guideAreaVisible && textBoxOverPhotoVisibleCondition && !screensaverRoot.cytvTextHidden   // [cytv] se esconde a los 10 s
+         opacity: (photoHeader.visible && photoHeader.text) || (photoBody.visible && photoBody.text)? 1:0
+         property int vMargin: mainViewRoot.getRelativeHeight(18)
+         property int hMargin: mainViewRoot.getRelativeWidth(55)
+@@ -196,6 +227,9 @@
+         radius: mainViewRoot.getRelativeHeight(10)
+         property bool isDynamic: true
+         isRepeatedMoving: !isPhotoRunning
++        // [cytv] el texto que se mueve (cuando no hay fotos) también se esconde a los 10 s, con un fundido
++        opacity: screensaverRoot.cytvTextHidden ? 0 : 1
++        Behavior on opacity { NumberAnimation { duration: 600 } }
+         isMoving: isDynamic && globalVars.appStatus.isAppActivated
+         LayoutMirroring.enabled: _isRTL
+         LayoutMirroring.childrenInherit: true
+@@ -534,6 +568,11 @@
+     }
+ 
+     function checkToggleGuideArea(keyCode) {
++        cytvShowText();     // [cytv] una tecla vuelve a mostrar el cartel 10 s
++        // [cytv] OK con "Editar protector" a la vista lo abre; cualquier otra tecla de la lista lo muestra
++        var cp = cytvPhoto();
++        if (cp && keyCode === globalVars.keyCodes.webOS_Enter && cp.cytvOk()) return;
++        if (cp) cp.cytvPoke();
+         console.log("screensaver keyPress: "+keyCode+", RED:"+globalVars.keyCodes.webOS_Red+", textBoxOverPhotoVisibleCondition:"+textBoxOverPhotoVisibleCondition);
+         if (textBoxOverPhotoVisibleCondition) {
+             if (keyCode === globalVars.keyCodes.webOS_Red) {
+@@ -565,6 +604,7 @@
+ 
+     onCurrentKeyChanged: {
+         debugLog("Changed- currentKey: "+currentKey);
++        cytvShowText();     // [cytv]
+         checkEnableBlockAction();
+         audioGuidanceController.setLock(true);
+         checkShowingScreensaver();
+@@ -594,6 +634,8 @@
+     }
+     onVisibleChanged: {
+         console.log("[Screensaver] onVisibleChanged");
++        if (visible) cytvShowText();    // [cytv] cada vez que aparece, el cartel se ve 10 s
++        cytvSetWheel(visible);          // [cytv] la ruedita muestra "Editar protector" solo mientras se ve
+     }
+     onCurrentScreensaverChanged: {
+         console.log("[Screensaver] onCurrentScreensaverChanged");

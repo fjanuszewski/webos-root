@@ -1,0 +1,12 @@
+--- original/UserInterfaceLayer/GlobalStyle.qml
++++ modificado/UserInterfaceLayer/GlobalStyle.qml
+@@ -57,7 +57,8 @@
+ 
+     property QtObject topShelf: QtObject {
+         property int width: screen.width
+-        property int height: 492 * screen.scaleFactor
++        // CleanYourTV: 750 (antes 492) para que entren reloj + clima + dólar + BTC; las apps se ubican debajo
++        property int height: 750 * screen.scaleFactor
+         property string searchBoard_bg: systemProperties.getImageUrl("bg_search_1.png")
+         property string accountBoard_bg: systemProperties.getImageUrl("bg_account.png")
+         property string lastInputBoard_bg: systemProperties.getImageUrl("img_ad_default.png")

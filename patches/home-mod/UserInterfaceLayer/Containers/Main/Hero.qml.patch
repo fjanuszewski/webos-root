@@ -1,0 +1,18 @@
+--- original/UserInterfaceLayer/Containers/Main/Hero.qml
++++ modificado/UserInterfaceLayer/Containers/Main/Hero.qml
+@@ -251,11 +251,11 @@
+         }
+     }
+ 
++    // CleanYourTV: el banner grande de publicidad está oculto (TopShelf) pero igual cargaba imágenes y videos
++    // de anuncios (alphonso.tv) y, sin la caché de admanager, reintentaba la imagen cientos de veces por segundo.
++    // No se crea ningún componente: ni Image, ni MediaPlayer, ni reintentos. Original en home-backup/.
+     function getComponent(entry) {
+-        switch(entry.type) {
+-        case "image": return banner;
+-        case "video": return video;
+-        }
++        return undefined;
+     }
+ 
+     function changePromotionIndex(direction) {

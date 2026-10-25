@@ -1,0 +1,95 @@
+--- original/TvComponent/ScreenSaver/PhotoSlide.qml
++++ modificado/TvComponent/ScreenSaver/PhotoSlide.qml
+@@ -1,7 +1,15 @@
++// [cytv] PhotoSlide.qml modificado — fondo del protector "Sin señal" de las entradas (HDMI, AV, TV sin señal).
++// Original de LG en inputcommon-backup/TvComponent/ScreenSaver/PhotoSlide.qml (fotos de stock de LG).
++// Cambio: cuando LG muestra sus fotos, se carga nuestro protector (cleanhome/CleanSaver.qml, fotos del álbum
++// de Google Photos). Mientras carga, negro; las fotos de LG solo como respaldo si en 20 s no carga o no
++// hay fotos en la lista (antes se veían 1 a 5 s cada vez que arrancaba).
++// Encima, el botón "✎ Editar protector" y su editor (cleanhome/SaverEditBar.qml): se crea como hija de la pantalla
++// de LG con z 50, porque esta parte (z -9) queda debajo de la zona del puntero de LG y no recibe ni hover ni clicks.
+ import QtQuick 2.6
+ import "../../View"
+ 
+ TvComponentBase {
++    id: slide
+     componentId: "photoSlide"
+     needActiveFocus: false
+     containToIdleStatus: true
+@@ -16,11 +24,58 @@
+     property int index: photoModel? photoModel.currentIdx : 0
+     property var imgArray: photoModel? photoModel.imgArray : []
+ 
++    // [cytv] nuestro protector
++    property bool cleanOk: cleanSaver.status === Loader.Ready && cleanSaver.item.photoCount > 0
++    // [cytv] respaldo con las fotos de LG: solo si el nuestro no cargó o tardó demasiado
++    property bool cytvWaitDone: false
++    // (no se usa Loader.Error: al aparecer, el Loader marca "error" un instante aunque después carga bien)
++    property bool cytvFallback: cytvWaitDone
++    onCytvFallbackChanged: if (cytvFallback && visible && !cleanOk) img.setSource()
++    Timer {
++        id: cytvWait
++        interval: 20000
++        running: slide.visible && !slide.cleanOk && !slide.cytvWaitDone
++        onTriggered: { console.log("[cytv] CleanSaver tarda: fotos de LG de respaldo"); slide.cytvWaitDone = true; }
++    }
++    onCleanOkChanged: {
++        console.log("[cytv] CleanSaver listo: " + cleanOk);
++        if (cleanOk) cytvEnsureBar();
++        if (cleanOk) img.source = "";
++        else if (visible) img.setSource();
++    }
++    Loader {
++        id: cleanSaver
++        anchors.fill: parent
++        z: 1
++        active: slide.visible && !slide.cytvReloading
++        visible: slide.cleanOk
++        source: active ? "file:///var/lib/webosbrew/cleanhome/CleanSaver.qml" : ""
++        onStatusChanged: if (status === Loader.Error) console.log("[cytv] CleanSaver no cargó")
++    }
+ 
++    // [cytv] "✎ Editar protector" (la avisan también Screensaver.qml: ruedita y teclas → cytvPoke, OK → cytvOk)
++    property Item cytvBar: null
++    property bool cytvReloading: false
++    function cytvEnsureBar() {
++        if (cytvBar) return;
++        var c = Qt.createComponent("file:///var/lib/webosbrew/cleanhome/SaverEditBar.qml");
++        if (c.status !== Component.Ready) { console.log("[cytv] SaverEditBar no cargó: " + c.errorString()); return; }
++        cytvBar = c.createObject(slide.parent, { "z": 50, "focusBack": slide.parent });
++        if (cytvBar) cytvBar.reloadSaver.connect(slide.cytvReload);
++    }
++    Binding { target: slide.cytvBar; property: "active"; value: slide.visible && slide.cleanOk; when: slide.cytvBar !== null }
++    Binding { target: slide.cytvBar; property: "saver"; value: cleanSaver.item; when: slide.cytvBar !== null }
++    function cytvPoke() { if (cytvBar) cytvBar.poke(); }
++    function cytvOk() { return cytvBar ? cytvBar.okPressed() : false; }
++    // al guardar en el editor, el protector se vuelve a crear para que lea los ajustes nuevos
++    function cytvReload() { cytvReloading = true; cytvReloadTimer.restart(); }
++    Timer { id: cytvReloadTimer; interval: 50; onTriggered: slide.cytvReloading = false }
++
+     onVisibleChanged: {
+         console.log("[SlideImage]"+visible);
+         if(!visible) {
+             img.source = "";
++            cytvWaitDone = false;
+         }
+     }
+     onImgArrayChanged: {
+@@ -57,6 +112,7 @@
+ 
+     Image {
+         id: img
++        visible: !slide.cleanOk && slide.cytvFallback
+         fillMode: parent.fillMode
+         sourceSize.width: parent.width
+         sourceSize.height: parent.height
+@@ -84,7 +140,8 @@
+         }
+         function setSource() {
+             console.log("[SlideImage]");
+-            source = parent.imgArray[(parent.index)];
++            // [cytv] con nuestro protector andando (o cargando) no se cargan las fotos de LG
++            source = slide.cleanOk || !slide.cytvFallback ? "" : parent.imgArray[(parent.index)];
+         }
+     }
+ }

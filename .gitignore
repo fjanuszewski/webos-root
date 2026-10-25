@@ -1,0 +1,56 @@
+# Datos personales: no se suben (quedan solo en la Mac)
+# enlace del álbum de Google Photos → ver cleanhome/saver/config.example.json
+cleanhome/saver/config.json
+# enlace del calendario → ver cleanhome/cal/config.example.json
+cleanhome/cal/config.json
+# lista de fotos del álbum (la arma la TV)
+cleanhome/saver/index.json
+cleanhome/saver/album.json
+cleanhome/saver/usadas.json
+# capturas de la pantalla de inicio (fotos, calendario)
+capturas/
+
+# Basura del sistema / temporales
+.DS_Store
+__pycache__/
+*.pyc
+/tvshot.png
+/-
+*.tgz
+*.part
+node_modules/
+
+# Datos de ESTA instalación (serial del teléfono, IP de la TV) → modelo en config.example.sh
+config.local.sh
+# Ajustes que el usuario elige en la TV (los escribe la propia TV; por si se copian a la Mac)
+cleanhome/settings.json
+
+# Código de LG (licencia confidencial): NO se publica. Nuestros cambios van como parches en patches/;
+# tools/armar-mods.sh baja el original de la propia TV (/old_root) y arma los archivos modificados.
+# (Con "/" adelante: solo las carpetas de la raíz; patches/home-mod/ etc. SÍ se publican.)
+/.originales/
+/home-mod/
+/saver-mod/
+/inputcommon-mod/
+/home-backup/
+/saver-backup/
+/inputcommon-backup/
+/inputpicker-backup/
+/*-backup/
+
+# Relevamientos de la TV (procesos, identificadores): se generan con tools/audit-run.sh
+/audit/
+
+# Cosas que no hacen falta para rootear ni instalar (app web vieja, notas de investigación, limpiador viejo): solo en la Mac
+/archivo/
+
+# Ajustes locales de Claude Code de cada uno
+.claude/settings.local.json
+
+# Contraseñas de wifi (en la TV viven en /var/lib/webosbrew/privado/, carpeta solo para root): nunca al repo
+/privado/
+wifi*.json
+
+# Fotos de fondo de cada persona (se suben a la tele con tools/subir-fondo.sh): no se publican
+/fondos/*
+!/fondos/LEEME.md

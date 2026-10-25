@@ -1,0 +1,118 @@
+--- original/UserInterfaceLayer/Containers/Main/TopShelf.qml
++++ modificado/UserInterfaceLayer/Containers/Main/TopShelf.qml
+@@ -28,6 +28,7 @@
+     signal updateShelf()
+ 
+     width: styleSheet.screen.width
++    // CleanYourTV: alto para reloj + widgets (clima, dólar, BTC); se define en GlobalStyle.qml (topShelf.height)
+     height: styleSheet.topShelf.height
+     focus: true
+ 
+@@ -35,18 +36,46 @@
+         if(activeFocus) {
+             if(systemProperties.isTopShelfGuide && !uiController.isEditMode) {
+                 topShelfGuide.forceActiveFocus();
+-            } else if (topDefaultAppsGuide.visible && hero.noAdvertisement && (hero.isCheckAdvertisement || !systemProperties.homePromotionOn)) {
+-                topDefaultAppsGuide.forceActiveFocus();
++            } else if (cleanTop.status === Loader.Ready && cleanTop.item.focusWidgets) {
++                // CleanYourTV: el foco va a los paneles (clima, mercados, calendario); ▲ desde ahí sube a los íconos
++                cleanTop.item.focusWidgets();
+             } else {
+-                if (topShelfContainer.lastFocusItem !== undefined) {
+-                    topShelfContainer.lastFocusItem.forceActiveFocus();
+-                } else {
+-                    hero.forceActiveFocus();
+-                }
++                // CleanYourTV: el carrusel esta oculto, el foco va a los iconos
++                topGlobalAction.forceActiveFocus();
+             }
+         }
+     }
+ 
++    // CleanYourTV: reloj + clima + dólar + BTC. Se carga aparte: si falla, el Home sigue andando.
++    Loader {
++        id: cleanTop
++        anchors.fill: parent
++        // Sincrónico: los widgets aparecen junto con la parte de arriba (antes llegaban unos segundos después)
++        asynchronous: false
++        source: "file:///var/lib/webosbrew/cleanhome/CleanTop.qml"
++        onStatusChanged: {
++            // console.warn (console.log no llega a /var/log/fullhome); sourceComponent.errorString() dice el motivo
++            if (status === Loader.Error) console.warn("CleanYourTV: CleanTop.qml no cargó: " + (cleanTop.sourceComponent ? cleanTop.sourceComponent.errorString() : "?"));
++            if (status === Loader.Ready) console.warn("CleanYourTV: CleanTop.qml cargado");
++        }
++    }
++    // Paneles: ▲ desde la fila de arriba → íconos; ▼ desde la de abajo → apps (igual que ▼ desde los íconos)
++    function cleanGoDown() {
++        if (topShelfGuide.visible) {
++            topShelfGuide.forceActiveFocus();
++        } else if (uiController.mainView.topArea.model.count > 1) {
++            uiController.mainView.topArea.currentIndex = 1;
++        } else {
++            uiController.mainView.appListArea.forceActiveFocus();
++        }
++    }
++    Connections {
++        target: cleanTop.item
++        ignoreUnknownSignals: true
++        onExitUp: topGlobalAction.forceActiveFocus()
++        onExitDown: root.cleanGoDown()
++    }
++
+     TopShelfGuide {
+ 
+         id: topShelfGuide
+@@ -87,7 +116,7 @@
+         anchors.top: parent.top
+         anchors.left: parent.left
+         enabled: visible
+-        visible: !topShelfGuide.visible && hero.noAdvertisement
++        visible: false // CleanYourTV: sin guia de apps por defecto en el hueco del banner
+ 
+         onActiveFocusChanged: {
+             if(activeFocus) {
+@@ -120,27 +149,15 @@
+         anchors.horizontalCenter: parent.horizontalCenter
+ 
+         Keys.onDownPressed: {
+-            if(hero.noAdvertisement) {
+-                if(uiController.mainView.topArea.model.count > 1) {
+-                    if (topDefaultAppsGuide.visible && (hero.isCheckAdvertisement || !systemProperties.homePromotionOn)) {
+-                        topDefaultAppsGuide.forceActiveFocus();
+-                    } else {
+-                        uiController.mainView.topArea.currentIndex = 1;
+-                    }
+-
+-                } else {
+-                    if (topShelfGuide.visible) {
+-                        topShelfGuide.forceActiveFocus();
+-                    } else if (topDefaultAppsGuide.visible && (hero.isCheckAdvertisement || !systemProperties.homePromotionOn)) {
+-                        topDefaultAppsGuide.forceActiveFocus();
+-                    } else {
+-                        uiController.mainView.appListArea.forceActiveFocus();
+-                    }
+-                }
++            // CleanYourTV: ▼ desde los íconos va a los paneles; si no cargaron, a la fila siguiente / apps
++            if (cleanTop.status === Loader.Ready && cleanTop.item.focusWidgets) {
++                cleanTop.item.focusWidgets();
++            } else if (topShelfGuide.visible) {
++                topShelfGuide.forceActiveFocus();
++            } else if (uiController.mainView.topArea.model.count > 1) {
++                uiController.mainView.topArea.currentIndex = 1;
+             } else {
+-                if (hero.visible) {
+-                    hero.forceActiveFocus();
+-                }
++                uiController.mainView.appListArea.forceActiveFocus();
+             }
+         }
+ 
+@@ -166,7 +183,7 @@
+         width: styleSheet.topShelf.width
+         height: styleSheet.topShelf.height - styleSheet.getRValue(72)
+         enabled: visible
+-        visible: !topShelfGuide.visible
++        visible: false // CleanYourTV: oculta el carrusel "Sponsored" (Hero + flechas)
+ 
+         Rectangle {
+ 

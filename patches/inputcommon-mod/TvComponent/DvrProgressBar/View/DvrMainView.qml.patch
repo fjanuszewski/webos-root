@@ -1,0 +1,18 @@
+--- original/TvComponent/DvrProgressBar/View/DvrMainView.qml
++++ modificado/TvComponent/DvrProgressBar/View/DvrMainView.qml
+@@ -578,12 +578,9 @@
+             property string voiceId: "RS_D"        // Recordings in Dvr progressbar
+             property var    voiceValue: [qsTr("Recordings")]
+ 
+-            visible: {
+-                if (modelManager.getModel("dvrModel").isDvrSupported === false) return false;
+-                if (globalVars.systemValue.enableHotelMode === "on") return false;
+-                if (modelManager.getModel("tvConfigure").isZiggoVODService === true) return false;
+-                return true;
+-            }
++            // [cytv] botón "Grabaciones" oculto: el usuario no usa grabaciones (servicios reclistmgr/recinfoadp apagados).
++            // Original en inputcommon-backup/TvComponent/DvrProgressBar/View/DvrMainView.qml
++            visible: false
+             anchors.left: timeshift.right;
+             anchors.leftMargin: {
+                 if (!visible) {
