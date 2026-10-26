@@ -45,10 +45,13 @@ Prueba: HDMI sin señal, misma lista de 24 fotos (12 verticales, 12 horizontales
 | Original: fotos a 1920 + fondo de las verticales con `FastBlur` | hasta **174 MB** | 109 MB (no devuelve) |
 | Sin `FastBlur` | 117 MB | 90 MB |
 | Fotos a 1280 | 165 MB | 107 MB |
-| **Actual: sin `FastBlur` y fotos a 1280** | **101 MB** | **83 MB** (devuelve todo) |
+| Sin `FastBlur` a 40 px (se veía feo) y fotos a 1280 | 101 MB | 83 MB (devuelve todo) |
+| **Actual: `FastBlur` en chico (384 px) y fotos a 1280** | por medir (unos pocos MB más que 101) | **83 MB** (devuelve todo) |
 
-- El fondo desenfocado sigue: ahora es la misma foto a 40 px, ampliada (el suavizado de Qt la deja borrosa). El
-  `FastBlur` armaba varias copias de pantalla completa en memoria de video.
+- El fondo desenfocado de las verticales: la foto chica (~384 px) se desenfoca con `FastBlur` sobre una superficie
+  de 384×216 y recién se agranda a pantalla completa con `scale`. Desenfocar algo chico cuesta unos pocos MB; el
+  `FastBlur` a pantalla completa de antes se comía ~60 MB. (Probado con la versión de 40 px sin blur: muy barato
+  pero se veía apelmazado, por eso se volvió al blur, pero en chico.)
 - Movimiento lento (Ken Burns): con una animación normal, la tele redibuja la pantalla 60 veces por segundo.
 
   | Movimiento | Procesador de toda la tele |

@@ -54,35 +54,36 @@ for j in rec-listmgr rec-info-adapter; do initctl stop $j 2>/dev/null; done
 # enseguida si una pantalla de edición lo pide). Todo en cleanhome/bucles.sh, un solo juego de bucles.
 [ -f /var/lib/webosbrew/cleanhome/bucles.sh ] && nohup sh /var/lib/webosbrew/cleanhome/bucles.sh </dev/null >/dev/null 2>&1 &
 
-# --- 3) Precarga de apps: apagada (la tele abría sola YouTube, Netflix, Amazon, Assistant... ~230 MB) ---
-# Kill switch de todo el punto 3 y 4: crear /var/lib/webosbrew/appcloser/DISABLED.
-AC=/var/lib/webosbrew/appcloser
-[ -f "$AC/DISABLED" ] || initctl stop webos-preload-manager 2>/dev/null
-
-# --- 4) Parar servicios bloat/ads/telemetria (esperar a que el sistema levante) ---
-# Siempre: publicidad, seguimiento y reportes a LG. La voz y el navegador NO se tocan.
-# iepg NO se para: el menú de entradas (botón INPUT) espera su respuesta para dibujarse.
-# Opcionales (los elige tools/reinstalar-todo.sh, que crea o borra estos archivos):
-#   /var/lib/webosbrew/apagar-transmision → AirPlay, Miracast, DLNA (dmr/upnpd), app LG ThinQ / second-screen
-#                                           (ss.gateway), HomeKit, descubrimiento SSDP, iot-client. ~100 MB.
-#   /var/lib/webosbrew/apagar-audio-bt    → audio Bluetooth (auriculares/barra). El control Magic Remote usa
-#                                           Bluetooth igual (lginput2): eso queda siempre.
-OPT=/var/lib/webosbrew
-sleep 12
-for pass in 1 2 3; do
-  for j in admanager contentminer uploadd remotelogger; do initctl stop $j 2>/dev/null; done
-  kill "$(pidof admanager)" 2>/dev/null
-  if [ -f "$OPT/apagar-transmision" ]; then
-    for j in airplay-adaptor second-screen-gateway miracast dmr ssdp-discovery-lgtv; do initctl stop $j 2>/dev/null; done
-    for p in airplay ss.gateway miracast dmr upnpd; do kill "$(pidof $p)" 2>/dev/null; done
-    kill -9 "$(pidof homekit)" 2>/dev/null   # ignora el kill normal y relanza la app de AirPlay (75 MB)
-    initctl stop iot-client 2>/dev/null; kill -9 "$(pidof iot-client)" 2>/dev/null   # ThinQ (aparatos LG de la casa)
-  fi
-  [ -f "$OPT/apagar-audio-bt" ] && for j in btaudiosnk btaudiosrc; do initctl stop $j 2>/dev/null; done
-  kill "$(pidof acr2)" 2>/dev/null
+# --- 3 y 4) Precarga de apps y servicios bloat: EN SEGUNDO PLANO Y DESACOPLADO ---
+# IMPORTANTE (2026-10-26): esto antes corría en primer plano con ~40 s de "sleep". Homebrew ejecuta este script
+# con run-parts y ESPERA a que termine antes de cerrar su "modo a prueba de fallos" (failsafe). Esos 40 s dejaban
+# el failsafe abierto: si la tele se apagaba/prendía en ese rato (fácil con el inicio rápido), el arranque
+# siguiente entraba en failsafe y DESACTIVABA todo lo nuestro (lo que pasó el 2026-10-26). Ahora el debloat se
+# lanza con setsid en segundo plano, así este script vuelve en 2-3 s y la ventana peligrosa casi desaparece.
+# Kill switch de todo esto: crear /var/lib/webosbrew/appcloser/DISABLED. Detalle en PERSISTENCIA.md.
+setsid sh -c '
+  OPT=/var/lib/webosbrew; AC=/var/lib/webosbrew/appcloser
+  # Precarga de apps apagada (la tele abría sola YouTube, Netflix, Amazon, Assistant... ~230 MB)
   [ -f "$AC/DISABLED" ] || initctl stop webos-preload-manager 2>/dev/null
-  sleep 6
-done
+  # Parar servicios bloat/ads/telemetria (esperar a que el sistema levante). La voz y el navegador NO se tocan.
+  # iepg NO se para: el menú de entradas (botón INPUT) espera su respuesta para dibujarse. Opcionales por archivo:
+  #   apagar-transmision → AirPlay/Miracast/DLNA/ThinQ/HomeKit (~100 MB); apagar-audio-bt → audio Bluetooth.
+  sleep 12
+  for pass in 1 2 3; do
+    for j in admanager contentminer uploadd remotelogger; do initctl stop $j 2>/dev/null; done
+    kill "$(pidof admanager)" 2>/dev/null
+    if [ -f "$OPT/apagar-transmision" ]; then
+      for j in airplay-adaptor second-screen-gateway miracast dmr ssdp-discovery-lgtv; do initctl stop $j 2>/dev/null; done
+      for p in airplay ss.gateway miracast dmr upnpd; do kill "$(pidof $p)" 2>/dev/null; done
+      kill -9 "$(pidof homekit)" 2>/dev/null
+      initctl stop iot-client 2>/dev/null; kill -9 "$(pidof iot-client)" 2>/dev/null
+    fi
+    [ -f "$OPT/apagar-audio-bt" ] && for j in btaudiosnk btaudiosrc; do initctl stop $j 2>/dev/null; done
+    kill "$(pidof acr2)" 2>/dev/null
+    [ -f "$AC/DISABLED" ] || initctl stop webos-preload-manager 2>/dev/null
+    sleep 6
+  done
+' </dev/null >/dev/null 2>&1 &
 
 # --- 5) Vigilante de apps: al cambiar de app cierra las demás (y las que abrió la precarga) ---
 # Desde 2026-10-25 corre DENTRO de botones.py (botones/vigilante.py, Python, ~4 MB en total) en vez del viejo

@@ -1,10 +1,12 @@
 // PhotoLayer.qml — una capa del protector: una foto cargada directo de Google, con movimiento lento (Ken Burns).
-// Verticales: entera, sobre la misma foto en chiquito (40 px) ampliada: se ve desenfocada sin efecto de desenfoque.
-// Horizontales: llenan la pantalla.
-// Memoria (medido 2026-10-25, ver SCREENSAVER.md): el efecto FastBlur se comía ~60 MB y las fotos a 1920 otros ~15;
-// así, el protector suma ~15 MB y al cerrarse los devuelve.
+// Verticales: entera, sobre la misma foto desenfocada de fondo. Horizontales: llenan la pantalla.
+// El fondo desenfocado se arma barato: la foto chica se desenfoca a tamaño reducido (FastBlur sobre ~384 px) y
+// recién después se agranda a pantalla completa. Así el blur cuesta unos pocos MB, no los ~60 MB que costaba
+// cuando se desenfocaba a pantalla completa. Las fotos de adelante se piden a 1280 (~15 MB); al cerrar el
+// protector se devuelve todo (ver SCREENSAVER.md, medición 2026-10-25).
 // CleanSaver usa dos capas (la que se ve y la que precarga la siguiente) y vacía la vieja después del fundido.
 import QtQuick 2.6
+import QtGraphicalEffects 1.0
 
 Item {
     id: layer
@@ -25,7 +27,7 @@ Item {
         // la mitad que 1920 al decodificar
         var w = Math.min(Math.round(width) || 1920, 1280), h = Math.round(w * 9 / 16);
         img.source = p.url + "=w" + w + "-h" + h;
-        bgSmall.source = (p.h > p.w) ? p.url + "=w40-h40" : "";
+        bgSmall.source = (p.h > p.w) ? p.url + "=w384-h384" : "";
     }
     function clear() {
         kb.stop();
@@ -47,15 +49,29 @@ Item {
         id: content
         width: parent.width; height: parent.height
 
-        // Fondo desenfocado para las fotos verticales: versión de 40 px de la foto, ampliada (smooth la suaviza)
-        Image {
-            id: bgSmall
+        // Fondo desenfocado para las fotos verticales: se desenfoca en chico (FastBlur sobre una superficie de
+        // 384x216) y recién se agranda a pantalla completa con "scale". bgSmall es solo la fuente (oculta);
+        // lo que se ve es el blur, escalado. Así el desenfoque cuesta poca memoria.
+        Item {
             anchors.fill: parent
-            visible: layer.portrait && status === Image.Ready
-            fillMode: Image.PreserveAspectCrop
-            smooth: true; asynchronous: true; cache: false
+            visible: layer.portrait && bgSmall.status === Image.Ready
+            clip: true
+            Item {
+                id: bgLow
+                width: 384; height: 216
+                transformOrigin: Item.TopLeft
+                scale: Math.max(parent.width / width, parent.height / height)
+                Image {
+                    id: bgSmall
+                    anchors.fill: parent
+                    fillMode: Image.PreserveAspectCrop
+                    smooth: true; asynchronous: true; cache: false
+                    visible: false
+                }
+                FastBlur { anchors.fill: parent; source: bgSmall; radius: 20 }
+            }
         }
-        Rectangle { anchors.fill: parent; color: Qt.rgba(0, 0, 0, 0.35); visible: bgSmall.visible }
+        Rectangle { anchors.fill: parent; color: Qt.rgba(0, 0, 0, 0.35); visible: layer.portrait && bgSmall.status === Image.Ready }
 
         Image {
             id: img

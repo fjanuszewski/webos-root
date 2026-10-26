@@ -131,3 +131,33 @@ encendido: SSH propio arriba, `cytv applied ... homemod=6 saver=1 botones=…`, 
 - **Sin terminal, `luna-send` falla de forma intermitente** (no hace la llamada y no avisa). `tvroot.sh` usa siempre `ssh -tt` y saca los `\r` de la salida.
 - **Lo que queda en segundo plano se corta al cerrar la sesión** (SIGHUP): los `luna-send` de los scripts van en primer plano y los loops con `nohup`.
 - **`pkill -f TEXTO` se puede matar a sí mismo** si el texto aparece en la línea de comandos de la sesión (el comando viaja en texto plano). `tvroot.sh` manda el comando en base64 y lo corre desde un archivo temporal, igual que hacía el bridge viejo. Para matar apps, mejor `kill $(pidof nombre)`.
+
+# Actualización 2026-10-26: la tele amaneció "de fábrica" (modo a prueba de fallos de Homebrew)
+
+## Qué pasó
+Una mañana la tele apareció sin nada de lo nuestro (inicio de LG, con publicidad). **No se perdió nada:** todos
+los archivos seguían en `/var/lib/webosbrew/`. Homebrew había entrado en su **modo a prueba de fallos (failsafe)**:
+abre un telnet de emergencia en el puerto 23, no levanta dropbear (SSH) ni corre los hooks de `init.d/`, así que
+la tele queda como LG de fábrica.
+
+## La causa
+Homebrew corre `init.d/*` con `run-parts` y **espera** a que terminen para recién cerrar el failsafe (pone una
+marca `/var/luna/preferences/webosbrew_failsafe` al empezar y la borra 10 s después de que `run-parts` vuelve).
+Nuestro `50-cytv-debloat` tenía **~40 s de `sleep`** (el debloat, 3 pasadas con esperas) en primer plano, así que
+la marca de failsafe quedaba puesta ~40 s en cada arranque. Si en ese rato la tele se apagaba y prendía —fácil con
+el **inicio rápido** de LG, que hace encendidos cortos—, el arranque siguiente veía la marca y entraba en failsafe.
+
+## La solución (aplicada)
+1. **El debloat se lanza en segundo plano** (`setsid … &`): el `init.d` ahora vuelve en ~3 s en vez de ~40 s, así
+   la ventana peligrosa casi desaparece. El debloat igual se hace (medido: publicidad/precarga apagadas, 400+ MB
+   libres). El inicio, el protector y los montajes van primero y rápido.
+2. **Vigilante de persistencia en `bucles.sh`:** cada 30 s revisa que el montaje del inicio siga puesto; si webOS
+   lo pisó (inicio rápido, restauración del snapshot), vuelve a correr el `init.d` (que es idempotente). Probado:
+   se desmonta todo a mano y a los ~30 s vuelve solo. Queda registrado en `cytv-debloat.log` ("montajes caídos").
+3. **Opcional, a prueba de balas:** apagar el inicio rápido de LG (`quickStartMode`) para que cada encendido sea un
+   arranque completo. Cuesta ~10-20 s más de encendido; lo decide la persona.
+
+## Recuperación manual si vuelve a pasar
+Por el puente del celular: `nc $TV_IP 23` (telnet de emergencia, da root). Después: relanzar dropbear
+(`/media/developer/apps/usr/palm/services/org.webosbrew.hbchannel.service/bin/dropbear -R &`) y correr
+`sh /var/lib/webosbrew/init.d/50-cytv-debloat`. Vuelve todo en segundos.

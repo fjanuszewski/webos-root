@@ -6,6 +6,9 @@
 #   - wifi (wifi/reconecta.js): cada 30 s, si el wifi no está conectado y hay redes guardadas, se reconecta sola
 #     (primero a la última red, después a las otras guardadas). No corre si existe /var/lib/webosbrew/no-guardar-wifi.
 #   - fondos: lista de fotos de /var/lib/webosbrew/fondos/ en fondos/index.json (fondos.sh indice; la lee Configuración → Tema)
+#   - VIGILANTE DE PERSISTENCIA: cada 30 s revisa que nuestros montajes sigan puestos; si webOS los pisó
+#     (p. ej. al despertar del inicio rápido, o una restauración del snapshot), vuelve a aplicar todo solo.
+#     Así la tele no queda nunca "de fábrica" por un pisón de webOS. Se apaga con home-mod/DISABLED.
 # Las pantallas de edición (CleanEdit.qml) escriben los "pedido" y cal/refresh. Se revisa cada 30 s.
 # Un solo juego de bucles: si ya corren (pid vivo), no se arrancan otros.
 C=/var/lib/webosbrew/cleanhome
@@ -30,5 +33,12 @@ while true; do
     fi
   fi
   sh $C/fondos.sh indice     # por si alguien agregó o borró fotos a mano (Agregar foto ya la arma sola)
+  # Vigilante de persistencia: si webOS pisó los montajes del inicio, re-aplicar todo (init.d es idempotente:
+  # si ya está puesto no hace nada). Solo si no se pidió desactivar (home-mod/DISABLED).
+  if [ ! -f /var/lib/webosbrew/home-mod/DISABLED ] && \
+     ! mount | grep -q " /usr/palm/applications/com.webos.app.fullhome/qml/"; then
+    echo "$(date) montajes caídos: re-aplico el inicio" >> /var/lib/webosbrew/cytv-debloat.log
+    setsid sh /var/lib/webosbrew/init.d/50-cytv-debloat </dev/null >/dev/null 2>&1 &
+  fi
   sleep 30; TS=$((TS - 30)); TC=$((TC - 30))
 done
